@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Upload and Display</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      form {
+        margin-bottom: 20px;
+      }
+      .image-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      .image-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 10px;
+      }
+      img {
+        max-width: 150px;
+        max-height: 150px;
+        border-radius: 8px;
+      }
+      .error,
+      .success {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 5px;
+      }
+      .error {
+        color: #fff;
+        background-color: #e74c3c;
+      }
+      .success {
+        color: #fff;
+        background-color: #2ecc71;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Image Upload and Display</h1>
+
+      <!-- Upload Form -->
+      <form id="uploadForm">
+        <label for="fileInput">Select an Image:</label>
+        <input
+          type="file"
+          id="fileInput"
+          name="file"
+          accept="image/*"
+          required
+        />
+        <button type="submit">Upload</button>
+      </form>
+      <p id="message"></p>
+
+      <!-- Image List -->
+      <h2>Stored Images</h2>
+      <div id="imageList" class="image-list"></div>
+    </div>
+
+    <script>
+      const uploadForm = document.getElementById("uploadForm");
+      const fileInput = document.getElementById("fileInput");
+      const message = document.getElementById("message");
+      const imageList = document.getElementById("imageList");
+
+      // Fetch and display all images
+      async function fetchImages() {
+        try {
+          const response = await fetch("http://localhost:5000/files");
+          if (!response.ok) {
+            throw new Error("Failed to fetch images.");
+          }
+          const files = await response.json();
+          imageList.innerHTML = ""; // Clear existing images
+          files.forEach((file) => {
+            const imageItem = document.createElement("div");
+            imageItem.classList.add("image-item");
+
+            const img = document.createElement("img");
+            img.src = `http://localhost:5000/image/${file.filename}`;
+            img.alt = file.filename;
+
+            const caption = document.createElement("p");
+            caption.textContent = file.filename;
+
+            imageItem.appendChild(img);
+            imageItem.appendChild(caption);
+            imageList.appendChild(imageItem);
+          });
+        } catch (err) {
+          console.error("Error fetching images:", err);
+        }
+      }
+
+      // Handle form submission
+      uploadForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const file = fileInput.files[0];
+        if (!file) {
+          message.textContent = "Please select a file.";
+          message.className = "error";
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const response = await fetch("http://localhost:5000/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          const result = await response.json();
+          if (response.ok) {
+            message.textContent = `File uploaded successfully: ${result.file.filename}`;
+            message.className = "success";
+            fetchImages(); // Refresh image list
+          } else {
+            message.textContent = `Error: ${result.message}`;
+            message.className = "error";
+          }
+        } catch (err) {
+          console.error("Upload failed:", err);
+          message.textContent = "Failed to upload file. Check your connection.";
+          message.className = "error";
+        }
+      });
+
+      // Fetch images on page load
+      fetchImages();
+    </script>
+  </body>
+</html>
